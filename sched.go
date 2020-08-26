@@ -7,6 +7,29 @@ import (
 	"time"
 )
 
+func main() {
+	s := &Scheduler{}
+
+	s.Start()
+
+	var x schd
+	x.executeAt = time.Now().Add(time.Second * 2)
+	s.Schedule(x.runned, 2000)
+
+	var y schd
+	y.executeAt = time.Now().Add(time.Second * 3)
+	s.Schedule(y.runned, 3000)
+
+	var z schd
+	z.executeAt = time.Now().Add(time.Second * 7)
+	s.Schedule(z.runned, 7000)
+
+	fmt.Printf("sleeping 10 seconds\n")
+	time.Sleep(10 * time.Second)
+
+	s.Stop()
+}
+
 type Scheduler struct {
 	hpl          sync.Mutex
 	h            heap.Heap
@@ -55,6 +78,7 @@ func (s *Scheduler) sched(n *SchedNode) {
 	if len(s.h) == 1 {
 		s.doNext()
 	}
+	fmt.Printf("heap has length %d\n", len(s.h))
 }
 
 func (s *Scheduler) scheduleNext() {
@@ -96,18 +120,4 @@ type schd struct {
 func (s *schd) runned() {
 	fmt.Printf("Now:             %s\n", time.Now().Format(time.RFC3339Nano))
 	fmt.Printf("Wanted to run at %s\n", s.executeAt.Format(time.RFC3339Nano))
-}
-
-func main() {
-	s := &Scheduler{}
-
-	s.Start()
-
-	var x schd
-	x.executeAt = time.Now().Add(time.Second * 2)
-	s.Schedule(x.runned, 2000)
-
-	time.Sleep(5 * time.Second)
-
-	s.Stop()
 }
