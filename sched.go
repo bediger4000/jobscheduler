@@ -21,24 +21,26 @@ func (s *Scheduler) Stop() {
 }
 
 func (s *Scheduler) Schedule(f func(), n int) {
-	now := time.Now()
-	now.Add(time.Duration(n) * time.Millisecond)
-
-	sn := &SchedNode{interval: n, fn: f, desiredTime: now}
+	scheduleAt := time.Now().Add(time.Duration(n) * time.Millisecond)
+	fmt.Printf("Schedule wakeup at       %v\n", scheduleAt.Format(time.RFC3339Nano))
+	sn := &SchedNode{interval: n, fn: f, desiredTime: scheduleAt}
 
 	s.sched(sn)
 }
 
 func (s *Scheduler) doNext() {
 	go func() {
-		<-s.tmr.C
-		var n heap.Node
-		s.h, n = s.h.Delete()
-		sn := n.(*SchedNode)
-		(sn.fn)()
+		for {
+			<-s.tmr.C
+			var n heap.Node
+			s.h, n = s.h.Delete()
+			sn := n.(*SchedNode)
+			(sn.fn)()
 
-		if len(s.h) == 0 {
-			return
+			if len(s.h) == 0 {
+				break
+			}
+			// Set timer for next functino
 		}
 	}()
 }
@@ -48,21 +50,23 @@ func (s *Scheduler) sched(n *SchedNode) {
 	defer s.hpl.Unlock()
 	s.h = s.h.Insert(n)
 
+	s.scheduleNext()
+
 	if len(s.h) == 1 {
-		// figure out interval
-		sn := s.h[0].(*SchedNode)
-		interv := sn.desiredTime.Sub(time.Now())
-		// interv could be negative, in the past
-
-		// start go routine
-		s.tmr = time.NewTimer(interv)
 		s.doNext()
-		return
 	}
+}
 
+func (s *Scheduler) scheduleNext() {
+	// figure out interval
 	sn := s.h[0].(*SchedNode)
-	intrvl := sn.desiredTime.Sub(s.nextDeadline)
-	fmt.Printf("%v\n", intrvl)
+	fmt.Printf("Scheduling for wakeup at %s\n", sn.desiredTime.Format(time.RFC3339Nano))
+	interv := sn.desiredTime.Sub(time.Now())
+	// interv could be negative, in the past
+	fmt.Printf("timer interval: %v\n", interv)
+
+	// might need to update timer instead of creating a new one
+	s.tmr = time.NewTimer(interv)
 }
 
 type SchedNode struct {
@@ -90,7 +94,8 @@ type schd struct {
 }
 
 func (s *schd) runned() {
-	fmt.Printf("Now: %s\n", time.Now().Format(time.RFC3339Nano))
+	fmt.Printf("Now:             %s\n", time.Now().Format(time.RFC3339Nano))
+	fmt.Printf("Wanted to run at %s\n", s.executeAt.Format(time.RFC3339Nano))
 }
 
 func main() {
@@ -99,10 +104,10 @@ func main() {
 	s.Start()
 
 	var x schd
-	x.executeAt = time.Now().Add(time.Second)
+	x.executeAt = time.Now().Add(time.Second * 2)
+	s.Schedule(x.runned, 2000)
 
 	time.Sleep(5 * time.Second)
 
-	s.Schedule(x.runned, 2000)
 	s.Stop()
 }
