@@ -55,15 +55,30 @@ func (s *Scheduler) doNext() {
 	go func() {
 		for {
 			<-s.tmr.C
-			var n heap.Node
-			s.h, n = s.h.Delete()
-			sn := n.(*SchedNode)
-			(sn.fn)()
 
-			if len(s.h) == 0 {
-				break
+			nowNS := time.Now().UnixNano()
+
+			// pick up all the jobs to run, there may be
+			// some sloppiness that means more than 1 job
+			// wants to run right now
+			for {
+
+				var n heap.Node
+				s.h, n = s.h.Delete()
+				sn := n.(*SchedNode)
+				(sn.fn)()
+
+				if len(s.h) == 0 {
+					break
+				}
+
+				if s.h[0].Value() > nowNS {
+					break
+				}
 			}
+
 			// Set timer for next functino
+			s.scheduleNext()
 		}
 	}()
 }
@@ -82,6 +97,9 @@ func (s *Scheduler) sched(n *SchedNode) {
 }
 
 func (s *Scheduler) scheduleNext() {
+	if len(s.h) < 1 {
+		return
+	}
 	// figure out interval
 	sn := s.h[0].(*SchedNode)
 	fmt.Printf("Scheduling for wakeup at %s\n", sn.desiredTime.Format(time.RFC3339Nano))
