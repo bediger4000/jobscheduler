@@ -1,5 +1,15 @@
 package main
 
+/*
+ * A non-idiomatic Go solution, in Go.
+ * Uses a binary heap as a priority queue to
+ * organize the schedule of jobs.
+ * Relies heavily on mutex locks to keep that
+ * heap from getting messed up, because it has
+ * a separate goroutine waiting for a time.Timer
+ * to elapse.
+ */
+
 import (
 	"fmt"
 	"jobscheduler/heap"
