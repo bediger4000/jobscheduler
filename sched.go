@@ -3,8 +3,18 @@ package main
 import (
 	"fmt"
 	"jobscheduler/heap"
+	"os"
+	"runtime"
+	"strconv"
 	"sync"
 	"time"
+)
+
+type action int
+
+const (
+	sleep    action = iota
+	schedule action = iota
 )
 
 func main() {
@@ -12,20 +22,35 @@ func main() {
 
 	s.Start()
 
-	var x schd
-	x.executeAt = time.Now().Add(time.Second * 2)
-	s.Schedule(x.runned, 2000)
+	var do action = schedule
 
-	var y schd
-	y.executeAt = time.Now().Add(time.Second * 3)
-	s.Schedule(y.runned, 3000)
+	wg := &sync.WaitGroup{}
 
-	var z schd
-	z.executeAt = time.Now().Add(time.Second * 7)
-	s.Schedule(z.runned, 7000)
+	for _, str := range os.Args[1:] {
 
-	fmt.Printf("sleeping 10 seconds\n")
-	time.Sleep(10 * time.Second)
+		n, err := strconv.Atoi(str)
+		if err != nil {
+			continue
+		}
+
+		switch do {
+		case schedule:
+
+			wg.Add(1)
+			x := &schd{executeAt: time.Now().Add(time.Millisecond * time.Duration(n)), wg: wg}
+			s.Schedule(x.runned, n)
+			do = sleep
+		case sleep:
+			sleepInterval := time.Millisecond * time.Duration(n)
+			fmt.Printf("\nsleeping for %v\n", sleepInterval)
+			time.Sleep(sleepInterval)
+			fmt.Println()
+			do = schedule
+		}
+	}
+
+	wg.Wait()
+	fmt.Printf("All scheduled jobs done\n")
 
 	s.Stop()
 }
@@ -45,7 +70,6 @@ func (s *Scheduler) Stop() {
 
 func (s *Scheduler) Schedule(f func(), n int) {
 	scheduleAt := time.Now().Add(time.Duration(n) * time.Millisecond)
-	fmt.Printf("Schedule wakeup at       %v\n", scheduleAt.Format(time.RFC3339Nano))
 	sn := &SchedNode{interval: n, fn: f, desiredTime: scheduleAt, desiredNS: scheduleAt.UnixNano()}
 
 	s.sched(sn)
@@ -69,6 +93,7 @@ func (s *Scheduler) doNext() {
 				s.hpl.Unlock()
 				sn := n.(*SchedNode)
 				go (sn.fn)()
+				runtime.Gosched()
 
 				if len(s.h) == 0 {
 					break
@@ -108,10 +133,8 @@ func (s *Scheduler) scheduleNext() {
 	}
 	// figure out interval
 	sn := s.h[0].(*SchedNode)
-	fmt.Printf("Scheduling for wakeup at %s\n", sn.desiredTime.Format(time.RFC3339Nano))
 	interv := sn.desiredTime.Sub(time.Now())
 	// interv could be negative, in the past
-	fmt.Printf("timer interval: %v\n", interv)
 
 	// might need to update timer instead of creating a new one
 	// this would happen if scheduler.Schedule() gets called with
@@ -121,8 +144,10 @@ func (s *Scheduler) scheduleNext() {
 		s.tmr.Stop()
 		s.tmr.Reset(interv)
 		s.nextDeadline = s.h[0].Value()
+		fmt.Printf("Rescheduling for wakeup at %s\n\n", sn.desiredTime.Format(time.RFC3339Nano))
 		return
 	}
+	fmt.Printf("Scheduling for wakeup at %s\n\n", sn.desiredTime.Format(time.RFC3339Nano))
 	s.nextDeadline = s.h[0].Value()
 	s.tmr = time.NewTimer(interv)
 }
@@ -150,9 +175,11 @@ func (sn *SchedNode) String() string {
 
 type schd struct {
 	executeAt time.Time
+	wg        *sync.WaitGroup
 }
 
 func (s *schd) runned() {
 	fmt.Printf("Now:             %s\n", time.Now().Format(time.RFC3339Nano))
-	fmt.Printf("Wanted to run at %s\n", s.executeAt.Format(time.RFC3339Nano))
+	fmt.Printf("Wanted to run at %s\n\n", s.executeAt.Format(time.RFC3339Nano))
+	s.wg.Done()
 }
