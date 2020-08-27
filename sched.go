@@ -34,7 +34,7 @@ type Scheduler struct {
 	hpl          sync.Mutex
 	h            heap.Heap
 	tmr          *time.Timer
-	nextDeadline time.Time
+	nextDeadline int64
 }
 
 func (s *Scheduler) Start() {
@@ -46,7 +46,7 @@ func (s *Scheduler) Stop() {
 func (s *Scheduler) Schedule(f func(), n int) {
 	scheduleAt := time.Now().Add(time.Duration(n) * time.Millisecond)
 	fmt.Printf("Schedule wakeup at       %v\n", scheduleAt.Format(time.RFC3339Nano))
-	sn := &SchedNode{interval: n, fn: f, desiredTime: scheduleAt}
+	sn := &SchedNode{interval: n, fn: f, desiredTime: scheduleAt, desiredNS: scheduleAt.UnixNano()}
 
 	s.sched(sn)
 }
@@ -63,18 +63,23 @@ func (s *Scheduler) doNext() {
 			// wants to run right now
 			for {
 
+				s.hpl.Lock()
 				var n heap.Node
 				s.h, n = s.h.Delete()
+				s.hpl.Unlock()
 				sn := n.(*SchedNode)
-				(sn.fn)()
+				go (sn.fn)()
 
 				if len(s.h) == 0 {
 					break
 				}
 
+				s.hpl.Lock()
 				if s.h[0].Value() > nowNS {
+					s.hpl.Unlock()
 					break
 				}
+				s.hpl.Unlock()
 			}
 
 			// Set timer for next functino
@@ -85,18 +90,19 @@ func (s *Scheduler) doNext() {
 
 func (s *Scheduler) sched(n *SchedNode) {
 	s.hpl.Lock()
-	defer s.hpl.Unlock()
 	s.h = s.h.Insert(n)
+	s.hpl.Unlock()
 
 	s.scheduleNext()
 
 	if len(s.h) == 1 {
 		s.doNext()
 	}
-	fmt.Printf("heap has length %d\n", len(s.h))
 }
 
 func (s *Scheduler) scheduleNext() {
+	s.hpl.Lock()
+	defer s.hpl.Unlock()
 	if len(s.h) < 1 {
 		return
 	}
@@ -108,18 +114,29 @@ func (s *Scheduler) scheduleNext() {
 	fmt.Printf("timer interval: %v\n", interv)
 
 	// might need to update timer instead of creating a new one
+	// this would happen if scheduler.Schedule() gets called with
+	// an interval of X - 1 millisec when s.tmr has X millisec left
+	// before firing.
+	if s.h[0].Value() < s.nextDeadline {
+		s.tmr.Stop()
+		s.tmr.Reset(interv)
+		s.nextDeadline = s.h[0].Value()
+		return
+	}
+	s.nextDeadline = s.h[0].Value()
 	s.tmr = time.NewTimer(interv)
 }
 
 type SchedNode struct {
 	interval    int       // milliseconds until this function runs
 	desiredTime time.Time // desired time for function run
+	desiredNS   int64
 	fn          func()
 }
 
 func (sn *SchedNode) Value() int64 {
 	// Should return desiredTime as a single number
-	return sn.desiredTime.UnixNano()
+	return sn.desiredNS
 }
 
 func (sn *SchedNode) IsNil() bool {
