@@ -1,5 +1,9 @@
 package heap
 
+// Insert puts a node in the heap at the right hand
+// side of the bottom row, which keeps the right
+// tree shape. siftUp moves the new node up the tree
+// as far as it should go.
 func (h Heap) Insert(n Node) Heap {
 	h = append(h, n)
 	h.siftUp(len(h) - 1)

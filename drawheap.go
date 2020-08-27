@@ -1,7 +1,7 @@
 package main
 
 /*
- * Create a heap.Head from the command line, use that heap to
+ * Create a heap.Heap from the command line, use that heap to
  * exercize heap.Draw, which puts GraphViz dot format output
  * on stdout.
  *

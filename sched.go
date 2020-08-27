@@ -26,6 +26,8 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 
+	serialNo := 0
+
 	for _, str := range os.Args[1:] {
 
 		n, err := strconv.Atoi(str)
@@ -37,8 +39,15 @@ func main() {
 		case schedule:
 
 			wg.Add(1)
-			x := &schd{executeAt: time.Now().Add(time.Millisecond * time.Duration(n)), wg: wg}
+			x := &schd{
+				executeAt: time.Now().Add(time.Millisecond * time.Duration(n)),
+				wg:        wg,
+				serialNo:  serialNo,
+			}
+			serialNo++
+
 			s.Schedule(x.runned, n)
+
 			do = sleep
 		case sleep:
 			sleepInterval := time.Millisecond * time.Duration(n)
@@ -95,11 +104,12 @@ func (s *Scheduler) doNext() {
 				go (sn.fn)()
 				runtime.Gosched()
 
+				s.hpl.Lock()
 				if len(s.h) == 0 {
+					s.hpl.Unlock()
 					break
 				}
 
-				s.hpl.Lock()
 				if s.h[0].Value() > nowNS {
 					s.hpl.Unlock()
 					break
@@ -174,12 +184,13 @@ func (sn *SchedNode) String() string {
 }
 
 type schd struct {
+	serialNo  int
 	executeAt time.Time
 	wg        *sync.WaitGroup
 }
 
 func (s *schd) runned() {
-	fmt.Printf("Now:             %s\n", time.Now().Format(time.RFC3339Nano))
-	fmt.Printf("Wanted to run at %s\n\n", s.executeAt.Format(time.RFC3339Nano))
+	fmt.Printf("%d Now:             %s\n", s.serialNo, time.Now().Format(time.RFC3339Nano))
+	fmt.Printf("%d Wanted to run at %s\n\n", s.serialNo, s.executeAt.Format(time.RFC3339Nano))
 	s.wg.Done()
 }

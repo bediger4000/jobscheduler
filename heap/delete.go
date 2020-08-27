@@ -1,5 +1,8 @@
 package heap
 
+// Delete removes the minimum-value item from the heap
+// and returns the remaining heap and that min value
+// item.
 func (h Heap) Delete() (Heap, Node) {
 	n := h[0]
 	h[0] = h[len(h)-1]

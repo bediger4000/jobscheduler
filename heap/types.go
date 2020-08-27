@@ -1,11 +1,15 @@
 package heap
 
+// Node is the interface tupe of items
+// stored in the heap
 type Node interface {
 	Value() int64
 	IsNil() bool
 	String() string
 }
 
+// Heap as an array: simplifies maintaining the shape
+// of the heap.
 type Heap []Node
 
 /*
