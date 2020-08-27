@@ -11,10 +11,14 @@ func (h Heap) Delete() (Heap, Node) {
 	return h, n
 }
 
+// siftDown checks for appropriate position of item
+// in partially-ordered array at index idx.
+// It moves items not in the right place.
 func (h Heap) siftDown(idx int) {
 	if idx > len(h)-1 {
 		return
 	}
+
 	left := 2*idx + 1
 	if left > len(h)-1 {
 		return

@@ -1,3 +1,6 @@
+// Package heap provides a binary minimum heap.
+// Heaps are implemented as variable-length arrays.
+// Items stored in a heap have to meet interface Node.
 package heap
 
 // Node is the interface tupe of items
