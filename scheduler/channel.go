@@ -4,6 +4,8 @@ package scheduler
  * A job scheduler that uses channels to manage concurrency.
  * A single goroutine manages the binary heap that orders functions
  * to run, so no need to lock/unlock all over the place.
+ * Uses a binary heap as a priority queue to
+ * organize the schedule of jobs.
  */
 
 import (
