@@ -42,8 +42,8 @@ $ ./sort 0 10 1 3 -2 6 9 8 11 4
 Typical mutex-locking scheduler:
 
 ```sh
-$ go build sched.go
-$ ./sched 5000 1000 2000
+$ go build jsched.go
+$ ./jsched -s channel 5000 1000 2000
 Scheduling for wakeup at 2020-08-27T12:09:54.352041426-06:00
 
 sleeping for 1s
@@ -68,12 +68,15 @@ The command line means:
 * Schedule a function to run in 2000 milliseconds
 
 The first function gets scheduled to run in 5 seconds,
-then the code sleeps 1 second.
+then the code sleeps 1 second,
+while the background goroutine waits for a timer to expire.
 That's 4 seconds until the first function should run.
 After the sleep the code schedules a 2nd function to run in 2 seconds.
-That's 2 seconds before the first function should run.
+That's 2 seconds before the first function should run,
+so the scheduler has to change the function to run,
+and the interval until the new next function wants to run.
 
-The functions scheduled to run have a serial number,
+The functions scheduled-to-run have a serial number,
 and a timestamp for when they should run.
 When executed, the functions print their serial number,
 when they ran,
@@ -91,6 +94,14 @@ By juggling scheduled times and sleep times,
 you can try to get the code to reschedule execution times,
 have 2 or more functions to run at the same wall clock time,
 etc.
+This is my cut at something of a testing framework.
+
+You can try 2 different scheduler designs:
+
+```sh
+$ ./jsched -s locking ....
+$ ./jsched -s channel ....
+```
 
 ## Analysis
 
@@ -110,10 +121,26 @@ It's also possible that the interviewer would use this problem
 for candidates of different nominal experience level,
 expecting more from candidates with more experience.
 
-I chose to write a full-fledged job scheduler,
+I chose to write two, full-fledged job schedulers,
 with a scheduling thread that runs in the background,
 each function running in its own thread.
 This just seemed more fun.
+One scheduler uses mutexes to allow the background thread
+and any other threads that schedule jobs,
+to insert and delete into a binary heap used as priority queue.
+The other scheduler uses Go channels to let a single goroutine
+manage the priority queue and running functions at scheduled times.
+
+I'm not sure which scheduler is better.
+The channel-based scheduler feels like it has fewer concurrency bugs,
+but the shutdown code was harder to get correct.
+The lock-based scheduler feels like it still has concurrency bugs
+waiting to happen.
+The lock-based scheduler has fewer lines of code,
+despite the conceptual simplicity of the channel-based scheduler.
+There doesn't seem to be a lot of performance difference.
+
+### Interview Analysis
 
 There's a whole lot to this problem.
 
@@ -138,9 +165,11 @@ isn't easy to get correct.
 Job candidates could distinguish themselves not only by
 actually writing (whiteboard!?) code,
 but by noting difficult spots while talking through a design,
-noting alternatives and why to not use them,
-and also the usual "how to test",
-and what test cases should occur.
+noting alternatives and why to not use them.
+The usual "how to test",
+and what test cases should occur would be a great thing
+because of the concurrency, and scheduling a new job
+that runs before the current interval expires..
 Candidates who are versed in more than 1 operating system
 could note different choices for each OS in scheduling primitives,
 and concurrency primitives.
