@@ -1,5 +1,11 @@
 package scheduler
 
+/*
+ * A job scheduler that uses channels to manage concurrency.
+ * A single goroutine manages the binary heap that orders functions
+ * to run, so no need to lock/unlock all over the place.
+ */
+
 import (
 	"fmt"
 	"jobscheduler/heap"
@@ -14,11 +20,15 @@ type ChannelScheduler struct {
 	nextDeadline int64
 }
 
+// Start part of inteface Scheduler
+// Gets the background goroutine running
 func (s *ChannelScheduler) Start() {
 	s.c = make(chan heap.Node, 0)
 	go s.runScheduling()
 }
 
+// Stop part of inteface Scheduler
+// Tries to get the background goroutine to return
 func (s *ChannelScheduler) Stop() {
 	if s.tmr != nil {
 		if !s.tmr.Stop() {
@@ -37,6 +47,8 @@ func (s *ChannelScheduler) Schedule(f func(), n int) {
 }
 
 // runScheduling gets run by a single goroutine, from Scheduler.Start
+// The control of waiting for timers to lapse, and/or receive new functions
+// to schedule happens in this method.
 func (s *ChannelScheduler) runScheduling() {
 	for {
 		if s.tmr != nil {
@@ -91,6 +103,7 @@ func (s *ChannelScheduler) runFunction() {
 
 // scheduleNext figures out what interval to sleep for the
 // next function-to-run to execute at the proper time.
+// The background goroutine ends up executing this.
 func (s *ChannelScheduler) scheduleNext() {
 	if len(s.h) < 1 {
 		return
