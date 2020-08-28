@@ -1,12 +1,5 @@
 package main
 
-/*
- * Uses a binary heap as a priority queue to
- * organize the schedule of jobs.
- * A single goroutine accesses the heap,
- * as an idiomatic Go way of doing concurrency
- */
-
 import (
 	"fmt"
 	"jobscheduler/scheduler"
