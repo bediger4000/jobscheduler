@@ -17,6 +17,7 @@ import (
 
 type ChannelScheduler struct {
 	c            chan heap.Node
+	done         chan bool
 	h            heap.Heap
 	tmr          *time.Timer
 	nextDeadline int64
@@ -26,6 +27,7 @@ type ChannelScheduler struct {
 // Gets the background goroutine running
 func (s *ChannelScheduler) Start() {
 	s.c = make(chan heap.Node, 0)
+	s.done = make(chan bool, 0)
 	go s.runScheduling()
 }
 
@@ -37,6 +39,8 @@ func (s *ChannelScheduler) Stop() {
 			<-s.tmr.C
 		}
 	}
+	s.done <- true
+	close(s.done)
 	close(s.c)
 }
 
@@ -52,32 +56,38 @@ func (s *ChannelScheduler) Schedule(f func(), n int) {
 // The control of waiting for timers to lapse, and/or receive new functions
 // to schedule happens in this method.
 func (s *ChannelScheduler) runScheduling() {
+DONE:
 	for {
-		if s.tmr != nil {
+		if len(s.h) > 0 {
 			select {
 			case _ = <-s.tmr.C:
 				// timer elapsed, run any functions that are due
-				s.tmr = nil
 				s.runFunction()
+				s.scheduleNext()
 			case node := <-s.c:
 				// new function to schedule
-				if node == nil {
-					// Scheduler.Stop() closed channel
-					break
+				if node != nil {
+					s.h = s.h.Insert(node)
+					s.scheduleNext()
 				}
-				s.h = s.h.Insert(node)
+			case _ = <-s.done:
+				// Scheduler.Stop() got called
+				break DONE
 			}
 		} else {
 			// Nothing scheduled, wait for new function to schedule to arrive
-			node := <-s.c
-			if node == nil {
-				// Scheduler.Stop() closed channel
-				break
+			select {
+			case node := <-s.c:
+				if node != nil {
+					s.h = s.h.Insert(node)
+					s.scheduleNext()
+				}
+			case _ = <-s.done:
+				// Scheduler.Stop() got called
+				break DONE
 			}
-			s.h = s.h.Insert(node)
-		}
 
-		s.scheduleNext()
+		}
 	}
 }
 
