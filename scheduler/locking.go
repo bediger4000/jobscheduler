@@ -25,7 +25,8 @@ import (
 	"time"
 )
 
-// LockingScheduler should fit interface Scheduler
+// LockingScheduler uses a binary heap as a priority queue to
+// organize and execute on time a schedule of jobs.
 type LockingScheduler struct {
 	hpl          sync.Mutex
 	h            heap.Heap

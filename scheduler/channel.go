@@ -1,13 +1,5 @@
 package scheduler
 
-/*
- * A job scheduler that uses channels to manage concurrency.
- * A single goroutine manages the binary heap that orders functions
- * to run, so no need to lock/unlock all over the place.
- * Uses a binary heap as a priority queue to
- * organize the schedule of jobs.
- */
-
 import (
 	"fmt"
 	"jobscheduler/heap"
@@ -15,6 +7,11 @@ import (
 	"time"
 )
 
+// ChannelScheduler is A job scheduler that uses channels to
+// manage concurrency.  A single goroutine manages the binary
+// heap that orders functions to run, so no need to lock/unlock
+// all over the place.  Uses a binary heap as a priority queue to
+// organize the schedule of jobs.
 type ChannelScheduler struct {
 	c            chan heap.Node
 	done         chan bool
@@ -23,7 +20,7 @@ type ChannelScheduler struct {
 	nextDeadline int64
 }
 
-// Start part of inteface Scheduler
+// Start part of inteface Scheduler.
 // Gets the background goroutine running
 func (s *ChannelScheduler) Start() {
 	s.c = make(chan heap.Node, 0)
@@ -31,20 +28,20 @@ func (s *ChannelScheduler) Start() {
 	go s.runScheduling()
 }
 
-// Stop part of inteface Scheduler
+// Stop part of inteface Scheduler.
 // Tries to get the background goroutine to return
 func (s *ChannelScheduler) Stop() {
+	s.done <- true
 	if s.tmr != nil {
 		if !s.tmr.Stop() {
 			<-s.tmr.C
 		}
 	}
-	s.done <- true
 	close(s.done)
 	close(s.c)
 }
 
-// Schedule part of inteface Scheduler
+// Schedule part of inteface Scheduler.
 // Creates a SchedNode and puts it on the chan to the goroutine
 // running runScheduling()
 func (s *ChannelScheduler) Schedule(f func(), n int) {
@@ -62,6 +59,7 @@ DONE:
 			select {
 			case _ = <-s.tmr.C:
 				// timer elapsed, run any functions that are due
+				s.tmr = nil
 				s.runFunction()
 				s.scheduleNext()
 			case node := <-s.c:
