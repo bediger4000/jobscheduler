@@ -13,7 +13,7 @@ If you have [GraphViz](https://graphviz.org/) installed, you can have the code b
 a heap, and see what it looks like.
 
 ```sh
-$ go build drawheap.go
+$ go build cmd/drawheap/drawheap.go
 $ ./drawheap 0 10 1 3 -2 6 9 8 11 4 > heap.dot
 $ dot -Tpng -o heap.png heap.dot
 ```
@@ -24,7 +24,7 @@ and that the bottom "row" of leaf nodes is filled in left-to-right
 I wrote a program to sort integers via a heap.
 
 ```sh
-$ go build sort.go
+$ go build cmd/sort/sort.go
 $ ./sort 0 10 1 3 -2 6 9 8 11 4
 
 -2
@@ -39,7 +39,7 @@ $ ./sort 0 10 1 3 -2 6 9 8 11 4
 11
 ```
 
-Typical mutex-locking scheduler:
+The job scheduler:
 
 ```sh
 $ go build jsched.go
