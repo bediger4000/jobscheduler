@@ -108,9 +108,13 @@ $ ./jsched -s channel ....
 This is a vague problem statement.
 A job candidate could implement a one-shot timer and maybe meet the
 carefully-parsed problem statement.
+Indeed, some people have read it that way,
+and [implemented a one-shot](https://github.com/iamvictorli/Daily-Coding-Problem/blob/master/solutions/1-10/Problem10.js)
 
-It seems likely that the problem requires a full-fledged job scheduler,
+Based on the "Medium" rating,
+it seems more likely that the problem requires a full-fledged job scheduler,
 where new jobs can be added at any time.
+A one-shot timer is prety much an "Easy" problem.
 This leads to interesting cases where the currently most urgent
 job is schedule to run at time X,
 but the newly to-be-scheduled job runs at time X - 1.
