@@ -7,6 +7,12 @@ and calls f after n milliseconds.
 
 ## Build and Run
 
+Building the job scheduler:
+
+```sh
+$ go build jsched.go
+```
+
 I wrote two test programs to get the heap manipulation code correct.
 
 If you have [GraphViz](https://graphviz.org/) installed, you can have the code build
@@ -39,7 +45,7 @@ $ ./sort 0 10 1 3 -2 6 9 8 11 4
 11
 ```
 
-The job scheduler:
+Running the job scheduler:
 
 ```sh
 $ go build jsched.go
@@ -66,6 +72,11 @@ The command line means:
 * Schedule a function to run in 5000 milliseconds (5 seconds)
 * Sleep 1000 milliseconds
 * Schedule a function to run in 2000 milliseconds
+
+All command line arguments are integers,
+alternating "how far in the future to schedule a job"
+and
+"how long to sleep before proceeding".
 
 The first function gets scheduled to run in 5 seconds,
 then the code sleeps 1 second,
