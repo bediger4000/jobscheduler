@@ -82,7 +82,7 @@ The first function gets scheduled to run in 5 seconds,
 then the code sleeps 1 second,
 while the background goroutine waits for a timer to expire.
 That's 4 seconds until the first function should run.
-After the sleep the code schedules a 2nd function to run in 2 seconds.
+After the sleep, the code schedules a 2nd function to run in 2 seconds.
 That's 2 seconds before the first function should run,
 so the scheduler has to change the function to run,
 and the interval until the new next function wants to run.
@@ -99,7 +99,7 @@ Then the second function (serial number 1) get scheduled to
 run before s/n 0.
 That actually happens,
 and the desired execution time is
-within 1 millsecond of the actual time a function executes.
+within 1 millisecond of the actual time a function executes.
 
 By juggling scheduled times and sleep times,
 you can try to get the code to reschedule execution times,
@@ -125,26 +125,27 @@ and [implemented a one-shot](https://github.com/iamvictorli/Daily-Coding-Problem
 Based on the "Medium" rating,
 it seems more likely that the problem requires a full-fledged job scheduler,
 where new jobs can be added at any time.
-A one-shot timer is prety much an "Easy" problem.
+A one-shot timer is an "Easy" problem.
 This leads to interesting cases where the currently most urgent
 job is schedule to run at time X,
 but the newly to-be-scheduled job runs at time X - 1.
 The "wakeup and run a function"
-timer has to be reset to accomdate the to-be-scheduled job.
+timer has to be reset to accomodate the to-be-scheduled job.
 
 It's also possible that the interviewer would use this problem
 for candidates of different nominal experience level,
 expecting more from candidates with more experience.
 
-I chose to write two, full-fledged job schedulers,
-with a scheduling thread that runs in the background,
-each function running in its own thread.
+I chose to write two, full-fledged job schedulers.
+Both schedulers have a thread that runs in the background,
+running each job (function) in its own thread.
 This just seemed more fun.
+
 One scheduler uses mutexes to allow the background thread
-and any other threads that schedule jobs,
-to insert and delete into a binary heap used as priority queue.
+and any other threads that schedule jobs
+to insert jobs into a binary heap used as priority queue.
 The other scheduler uses Go channels to let a single goroutine
-manage the priority queue and running functions at scheduled times.
+manage the priority queue.
 
 I'm not sure which scheduler is better.
 The channel-based scheduler feels like it has fewer concurrency bugs,
