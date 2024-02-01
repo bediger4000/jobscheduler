@@ -3,7 +3,7 @@
 // Items stored in a heap have to meet interface Node.
 package heap
 
-// Node is the interface tupe of items
+// Node is the interface type of items
 // stored in the heap
 type Node interface {
 	Value() int64
